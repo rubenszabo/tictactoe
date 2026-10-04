@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicTacToe</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --text: #f1f1f1;
+            --cell-bg: #2c2c48;
+            --cell-hover: #35355a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            color: var(--text);
+        }
+
+        body {
+            text-align: center;
+            display: grid;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg);
+        }
+
+        #tabla {
+            display: grid;
+            grid-template-columns: auto auto auto;
+            height: 330px;
+            width: 330px;
+            margin: 10px auto;
+        }
+
+        .item {
+            display: flex;
+            box-sizing: border-box;
+            width: 100px;
+            height: 100px;
+            background: var(--cell-bg);
+            border-radius: 10px;
+            margin: auto;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.6rem;
+            font-weight: 700;
+        }
+
+        .item:hover {
+            background-color: var(--cell-hover);
+        }
+
+        .nyertes {
+            background-color: #ffd166;
+            color: black;
+        }
+
+        .nyertes:hover {
+            background-color: #ffd166;
+        }
+
+        #eredmeny {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 20px;
+        }
+
+        #gameMode button {
+            background-color: var(--bg);
+            border: none;
+            border-radius: 10px;
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #gameMode button.active {
+            background-color: white;
+            color: black;
+        }
+
+        #gameMode #ujjatek {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>TicTacToe</h1>
+    <div id="gameMode">
+        <button id="btnKetjatekos" class="active">Két játékos</button>
+        <button id="btnRobot">Robot ellen</button>
+        <button id="ujjatek">Új játék</button>
+    </div>
+    <div id="eredmeny">X következik</div>
+    <div id="tabla"></div>
+
+    <script>
+        var tabla = ["", "", "", "", "", "", "", "", ""];
+        var kovetkezo = "X";
+        var vege = false;
+        var jatekMod = "ketjatekos";
+        var robotIdozito = null;
+        var nyeroSor = null;
+
+        var nyerosorok = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function tablaFeltoltes() {
+            var tablaDiv = document.getElementById("tabla");
+            tablaDiv.innerHTML = "";
+            for (var i = 0; i < 9; i++) {
+                var mezo = document.createElement("div");
+                mezo.className = "item";
+                mezo.id = i;
+                mezo.onclick = function () {
+                    mezoreKattint(this.id);
+                };
+                tablaDiv.appendChild(mezo);
+            }
+        }
+
+        function mezoreKattint(index) {
+            if (vege) return;
+            if (tabla[index] != "") return;
+            if (jatekMod == "robot" && kovetkezo != "X") return;
+
+            tabla[index] = kovetkezo;
+            kiiras();
+
+            var eredmeny = vanNyertes();
+            if (eredmeny != "") {
+                jatekVege(eredmeny);
+                return;
+            }
+
+            if (kovetkezo == "X") {
+                kovetkezo = "O";
+            } else {
+                kovetkezo = "X";
+            }
+
+            if (jatekMod == "robot" && kovetkezo == "O") {
+                uzenetKiiras("Robot gondolkodik...");
+                robotIdozito = setTimeout(robotLep, 500);
+            } else {
+                uzenetKiiras(kovetkezo + " következik");
+            }
+        }
+
+        function kiiras() {
+            for (var i = 0; i < 9; i++) {
+                var mezo = document.getElementById(i);
+                mezo.innerHTML = tabla[i];
+                mezo.classList.remove("nyertes");
+            }
+        }
+
+        function vanNyertes() {
+            for (var i = 0; i < nyerosorok.length; i++) {
+                var a = nyerosorok[i][0];
+                var b = nyerosorok[i][1];
+                var c = nyerosorok[i][2];
+                if (tabla[a] != "" && tabla[a] == tabla[b] && tabla[a] == tabla[c]) {
+                    nyeroSor = nyerosorok[i];
+                    return tabla[a];
+                }
+            }
+            var tele = true;
+            for (var i = 0; i < 9; i++) {
+                if (tabla[i] == "") {
+                    tele = false;
+                }
+            }
+            if (tele) {
+                return "dontetlen";
+            }
+            return "";
+        }
+
+        function jatekVege(eredmeny) {
+            vege = true;
+            if (eredmeny == "dontetlen") {
+                uzenetKiiras("Döntetlen!");
+            } else if (jatekMod == "robot") {
+                if (eredmeny == "X") {
+                    uzenetKiiras("Nyertél!");
+                } else {
+                    uzenetKiiras("A robot nyert.");
+                }
+            } else {
+                uzenetKiiras(eredmeny + " nyert!");
+            }
+            if (nyeroSor != null) {
+                for (var i = 0; i < nyeroSor.length; i++) {
+                    document.getElementById(nyeroSor[i]).classList.add("nyertes");
+                }
+            }
+        }
+
+        function robotLep() {
+            var lepes = -1;
+
+            lepes = keresNyeroLepes("O");
+
+            if (lepes == -1) {
+                lepes = keresNyeroLepes("X");
+            }
+
+            if (lepes == -1 && tabla[4] == "") {
+                lepes = 4;
+            }
+            var uresek = [];
+            if (lepes == -1) {
+                for (var i = 0; i < 9; i++) {
+                    if (tabla[i] == "") {
+                        uresek.push(i);
+                    }
+                }
+                lepes = uresek[Math.floor(Math.random() * uresek.length)];
+            }
+
+            tabla[lepes] = "O";
+            kiiras();
+
+            var eredmeny = vanNyertes();
+            if (eredmeny != "") {
+                jatekVege(eredmeny);
+                return;
+            }
+
+            kovetkezo = "X";
+            uzenetKiiras(kovetkezo + " következik");
+        }
+
+        function keresNyeroLepes(jel) {
+            for (var i = 0; i < nyerosorok.length; i++) {
+                var a = nyerosorok[i][0];
+                var b = nyerosorok[i][1];
+                var c = nyerosorok[i][2];
+
+                var ertekek = [tabla[a], tabla[b], tabla[c]];
+                var ures = -1;
+                var db = 0;
+
+                if (tabla[a] == "") ures = a;
+                if (tabla[b] == "") ures = b;
+                if (tabla[c] == "") ures = c;
+
+                for (var j = 0; j < ertekek.length; j++) {
+                    if (ertekek[j] == jel) db++;
+                }
+
+                if (db == 2 && ures != -1) {
+                    return ures;
+                }
+            }
+            return -1;
+        }
+
+        document.getElementById("btnKetjatekos").onclick = function () {
+            jatekMod = "ketjatekos";
+            document.getElementById("btnKetjatekos").classList.add("active");
+            document.getElementById("btnRobot").classList.remove("active");
+            ujJatek();
+        };
+
+        document.getElementById("btnRobot").onclick = function () {
+            jatekMod = "robot";
+            document.getElementById("btnRobot").classList.add("active");
+            document.getElementById("btnKetjatekos").classList.remove("active");
+            ujJatek();
+        };
+
+        document.getElementById("ujjatek").onclick = function () {
+            ujJatek();
+        };
+
+        function ujJatek() {
+            if (robotIdozito) {
+                clearTimeout(robotIdozito);
+                robotIdozito = null;
+            }
+            tabla = ["", "", "", "", "", "", "", "", ""];
+            kovetkezo = "X";
+            vege = false;
+            nyeroSor = null;
+            kiiras();
+            uzenetKiiras(kovetkezo + " következik");
+        }
+
+        function uzenetKiiras(szoveg) {
+            document.getElementById("eredmeny").innerHTML = szoveg;
+        }
+
+        tablaFeltoltes();
+        kiiras();
+    </script>
+</body>
+
+</html>
